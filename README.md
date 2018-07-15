@@ -1,17 +1,20 @@
 # pdf-sign
-View and sign PDFs
+A GUI to view and sign PDFs.
 ## Getting Started
 Clone the repository. Use */env/requirements.txt* to create a new environment.
-### Code Example
+
+### Usage
 `python main.py`
 
 ### Prerequisites
 See *requirements.txt*.
 
-## Built With
+## Frameworks
 * [TKinter](https://docs.python.org/3/library/tk.html) - The GUI framework.
 * [pdf2image](https://github.com/Belval/pdf2image) - A PDF to PIL image converter.
 
+## Features
+...
 ## Limitations/Known Issues
 * pdf2image has issues managing memory with large PDFs.
 
