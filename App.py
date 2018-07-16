@@ -11,9 +11,34 @@ class App(tk.Frame):
         super().__init__(master)
         self.master = master
 
-        #self.load_pdf(pdf_to_imgs("./sample.pdf"))
+        ## Track left and right control keys
+        self.control_key_is_pressed = False # Manage "control" key down as a flag
+        self.bind_all("<KeyPress-Control_L>", self.set_control_key_is_pressed)
+        self.bind_all("<KeyRelease-Control_L>", self.set_control_key_is_pressed)
+        self.bind_all("<KeyPress-Control_R>", self.set_control_key_is_pressed)
+        self.bind_all("<KeyRelease-Control_R>", self.set_control_key_is_pressed)
+        ### Respond to control-s
+        self.bind_all("<Key-s>", self.is_saveshortcut)
+        ### Response to control-o
+        self.bind_all("<Key-o>", self.is_openshortcut)
 
         self.__setup() # Handle standard setup
+
+    def is_saveshortcut(self, event):
+        if self.control_key_is_pressed:
+            # Equivalently, user has pressed ctrl-s
+            self.save() # Invoke save function
+
+    def is_openshortcut(self, event):
+        if self.control_key_is_pressed:
+            # Equivalently, user has pressed ctrl-o
+            self.open() # Invoke open function
+
+    def set_control_key_is_pressed(self, event):
+        if str(event.type) is "KeyPress":
+            self.control_key_is_pressed = True
+        elif str(event.type) is "KeyRelease":
+            self.control_key_is_pressed = False
 
     def __setup(self):
         self.scale = self.screen_scale()
@@ -31,6 +56,7 @@ class App(tk.Frame):
         ## Create "file" section of menu with
         file_cascade = tk.Menu(menu, tearoff=0, font=self.custom_font) # Dashed line is disabled
         file_cascade.add_command(label="Open", command=self.open) # Handle open behavior
+        file_cascade.add_command(label="Save", command=self.save) # Handle save behavior
         file_cascade.add_separator() # Separator after "Open"
         file_cascade.add_command(label="Exit", command=self.master.quit) # Handle exit behavior
         menu.add_cascade(label="File", menu=file_cascade) # Add file to Menu
@@ -46,45 +72,13 @@ class App(tk.Frame):
         self.mainloop()
 
     def __make_canvas(self):
-
-
-        self.imgA = Image.open("/home/jonasz/Developer/projects/pdf_sign/a.png")
-        photoA = ImageTk.PhotoImage(self.imgA)
-
-        scroll = AutoScrollbar(self.master)
-        scroll.grid(row=0, column=1, sticky=tk.N+tk.S)
-        canvas = tk.Canvas(self.master, yscrollcommand=scroll.set, bg='green')
-        canvas.grid(row=0, column=0, sticky=tk.N+tk.S+tk.E+tk.W)
-        scroll.config(command=canvas.yview)
-
-        self.master.grid_rowconfigure(0, weight=1)
-        self.master.grid_columnconfigure(0, weight=1)
-
-        frame = tk.Frame(canvas, bg='blue')
-        frame.rowconfigure(1, weight=1)
-        frame.columnconfigure(1, weight=1)
-
-        rows = 5
-        for i in range(1,rows):
-            label = tk.Label(frame, image=photoA)
-            label.image = photoA
-            label.grid(row=i, column=0, sticky=tk.E+tk.W)
-
-
-        canvas.create_window(0, 0, anchor=tk.NW, window=frame)
-
-        frame.update_idletasks()
-
-        canvas.config(scrollregion=canvas.bbox("all"))
-
-        self.master.bind("<Configure>", self.resize)
-        self.master.mainloop()
+        pass
 
     def resize(self, event):
         size = (event.width, event.height)
         print(size)
 
-    def screen_scale(self)->float:
+    def screen_scale(self) -> float:
         """
         Returns scale of the screen the current window is on (width / height).
         """
@@ -102,6 +96,14 @@ class App(tk.Frame):
         )
         # Add pdf (as a set of images) to window
         self.load_pdf(pdf_to_imgs(file))
+
+    def save(self):
+
+        file = filedialog.asksaveasfile(mode='w', defaultextension=".pdf")
+        if file is None:
+            # Dialog has been closed with "Cancel"
+            return
+        file.close()
 
     def draw(self):
         """
