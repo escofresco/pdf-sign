@@ -17,7 +17,6 @@ def pdf_to_imgs(src_pdf, first_page=None, last_page=None, res=72) -> TemporaryDi
     :returns str: The path to directory containing pdf images
     """
     dir = TemporaryDirectory()
-    #dir = '/home/jonasz/Developer/projects/pdf_sign/imgs'
     convert_from_path(src_pdf, dpi=res, output_folder=dir.name, fmt='ppm')
     return dir
 
