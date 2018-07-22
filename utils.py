@@ -22,18 +22,17 @@ def pdf_to_imgs(src_pdf, first_page=None, last_page=None, res=72) -> TemporaryDi
 
 def pdf_images(dir) -> tk.PhotoImage:
     """
-    Convert images in a given directory to tk.PhotoImage objects.
+    Convert images in a given directory to tk.PhotoImage objects using generator.
 
     :param String dir: The directory containing images
+    :yields tuple: ("<img_path>", <PhotoImage>)
     """
     images = []
     files = listdir(dir)
     for img_name in sorted(files):
         if is_image(img_name):
             img_path = dir + '/' + img_name
-            yield tk.PhotoImage(file=img_path)
-
-    return images
+            yield (img_path, ImageTk.PhotoImage(file=img_path))
 
 def is_image(img_name)->bool:
     """
