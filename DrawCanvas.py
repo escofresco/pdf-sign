@@ -10,6 +10,10 @@ class DrawCanvas(tk.Canvas):
         self.parent = parent
         self.pdf_images = {} # Track images on the canvas
 
+        # List of lists of tuples containing line coordinates ->
+        # [[(x0, y0, x1, y1), ..., (x(n-1), y(n-1), xn, yn)], ...]
+        self.lines = []
+        self.current_stroke = [] # The current stroke; gets appended to self.lines when complete
         ## Horizontal scrollbar subclass AutoScrollbar
         self.horizontal_autoscroll = AutoScrollbar(self.parent, orient=tk.HORIZONTAL, width=16*2)
         self.horizontal_autoscroll['command'] = self.xview
@@ -25,13 +29,9 @@ class DrawCanvas(tk.Canvas):
                 yscrollcommand=self.vertical_autoscroll.set,
                 xscrollcommand=self.horizontal_autoscroll.set)
 
-
         ## Add images of pdf pages to this canvas
         image_dir = pdf_to_imgs("duality.pdf")
         self.load_pdf_images(image_dir.name)
-
-        line_img = Image.new("RGB", (1000, 1000), "#FFFFFF")
-        img_draw = ImageDraw.Draw(line_img)
 
         self.grid(column=0, row=0, sticky=(tk.N,tk.W,tk.E,tk.S))
 
@@ -100,33 +100,96 @@ class DrawCanvas(tk.Canvas):
         self.create_line((self.lastx, self.lasty, x, y), fill=self.color, width=5, tags='currentline')
         self.lastx, self.lasty = x, y
 
-        img_draw.line([(self.lastx, self.lasty), (x, y)], fill=self.color, width=5)
+        #self._draw_img.line([(self.lastx, self.lasty), (x, y)], fill=self.color, width=5)
+        self.current_stroke.append((self.lastx, self.lasty, x, y)) # Track the current stroke
 
     def doneStroke(self, event):
         self.itemconfigure('currentline', width=1)
+        self.lines.append(self.current_stroke) # Stroke is complete; add to list of lines
+        self.stroke = []
 
     def clear(self, event):
-        line_img.save("asdf.jpg")
-        for tag in self.find_all():
-            if tag > 4:
-                self.delete(tag)
+        # self.draw_img.save("asdf.jpg")
+        # for tag in self.find_all():
+        #     if tag > 4:
+        #         self.delete(tag)
+        self.save()
+
+    def add_strokes_to_image(self, page_height):
+        edited_pages = {}
+        for stroke in self.lines:
+            for line in stroke:
+                page_num = self.coordinate_to_page((line[0], line[1]), page_height)
+                page_dim = (self.pdf_images[page_num][1].width(), int(page_height))
+
+                # edited_pages[page]["image"] = Image.new(
+                #     'RGB',
+                #     (self.pdf_images[page].width(), self.pdf_images[page].height()),
+                #     (255,255,255))
+                # edited_pages[page]["image_draw"] = ImageDraw.Draw(edited_pages[page]["image"])
+                # edited_pages[page]["image_draw"].line([(line[0], line[1]), (line[2], line[3])], fill=self.color, width=10)
+
+                # Check if this page has been edited already
+                if page_num not in edited_pages:
+                    # Create new entry in edited_pages
+                    print(self.pdf_images[page_num][0])
+                    temp_img = Image.open(self.pdf_images[page_num][0])
+                    edited_pages[page_num] = {
+                        'image': temp_img,
+                        'image_draw': ImageDraw.Draw(temp_img)
+                    }
+
+                # Draw the line in this stroke
+                edited_pages[page_num]['image_draw'].line([(line[0], line[1]), (line[2], line[3])], fill=self.color, width=10)
+        else:
+            # Both top-level loop is complete; Save every page.
+            for i, page in enumerate(edited_pages.keys()):
+                #self.pdf_images[page][1].paste(edited_pages[page]["image"], (20,20))
+                edited_pages[page]["image"].save(str(i) + ".png")
+                #self.pdf_images[page][1].save("asdf.png")
+
+    def coordinate_to_page(self, coord, page_height):
+        """
+        :param tuple coord: (x, y)
+        :returns int: The page number this coordinate is on. floor(y / page_count)
+        """
+        return int(coord[1] // page_height)
+
+    def save(self):
+        page_count = max(self.pdf_images.keys()) + 1 # The largest number + 1
+        page_height = self.draw_img.height / page_count # Height of each page
+        page_width = self.draw_img.width
+        self.add_strokes_to_image(page_height)
+        # for page in range(page_count):
+        #     cur_y = page * page_height
+        #     box = (0, cur_y, page_width, cur_y + page_height) # Size of current page
+        #     temp = self.draw_img.crop(box) # Crop to current page size
+        #     #asdf = self.pdf_images[page] #Image.open(self.pdf_images[page])
+        #     #temp = asdf.paste(temp, (0,0)) # Paste temp onto current pdf page
+        #     temp = self.pdf_images[page].paste(temp, (25,250))
+        #     temp.save(str(page) + ".png")
 
     def load_pdf_images(self, image_dir):
         """
         Render images on canvas from the given directory. (Images must be .ppm)
 
-        :param String image_dir: Direcotory source of images.
+        :param String image_dir: Directory source of images.
         """
         images = pdf_images(image_dir)
         img_dim = [0, 0] # (width, height) of the collection of images
-        for i, img in enumerate(images):
+        for i, (img_path, photo_img) in enumerate(images):
             # FIXME: Display images without keeping them in memory; could cause program failure
-            self.pdf_images[i] = img # Keep images in memory
-            if img.width() > img_dim[0]:
-                img_dim[0] = img.width()
-            img_dim[1] += img.height()
-            self.create_image(0, img.height()*i, anchor=tk.NW, image=self.pdf_images[i])
+            self.pdf_images[i] = (img_path, photo_img) # Keep images in memory since tkinter doesn't do this automatically
+            if photo_img.width() > img_dim[0]:
+                img_dim[0] = photo_img.width()
+            img_dim[1] += photo_img.height()
+            self.create_image(0, photo_img.height()*i, anchor=tk.NW, image=self.pdf_images[i][1])
         else:
             # Update canvas scrollregion to cover the full collection of images
             # in x and y directions
             self.config(scrollregion=(0, 0, img_dim[0], img_dim[1]))
+
+            # Create an image the size of the full collection of images to account
+            # for any point where the user may want to draw
+            self.draw_img = Image.new('RGBA', (img_dim[0], img_dim[1]), (250, 10, 0, 0))
+            self._draw_img = ImageDraw.Draw(self.draw_img)
