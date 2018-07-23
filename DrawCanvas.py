@@ -2,7 +2,7 @@ from AutoScrollbar import AutoScrollbar
 from PIL import Image, ImageTk, ImageDraw
 from platform import system
 import tkinter as tk
-from utils import pdf_images, pdf_to_imgs
+from utils import pdf_images, pdf_to_imgs, save_images_as_pdf
 
 class DrawCanvas(tk.Canvas):
     def __init__(self, image_dir=None, parent=None):
@@ -98,10 +98,12 @@ class DrawCanvas(tk.Canvas):
     def addLine(self, event):
         x, y = self.canvasx(event.x), self.canvasy(event.y)
         self.create_line((self.lastx, self.lasty, x, y), fill=self.color, width=5, tags='currentline')
+
+        # Track the current stroke as a series of lines
+        self.current_stroke.append((self.lastx, self.lasty, x, y)) # Track the current stroke
         self.lastx, self.lasty = x, y
 
         #self._draw_img.line([(self.lastx, self.lasty), (x, y)], fill=self.color, width=5)
-        self.current_stroke.append((self.lastx, self.lasty, x, y)) # Track the current stroke
 
     def doneStroke(self, event):
         self.itemconfigure('currentline', width=1)
@@ -122,31 +124,31 @@ class DrawCanvas(tk.Canvas):
                 page_num = self.coordinate_to_page((line[0], line[1]), page_height)
                 page_dim = (self.pdf_images[page_num][1].width(), int(page_height))
 
-                # edited_pages[page]["image"] = Image.new(
-                #     'RGB',
-                #     (self.pdf_images[page].width(), self.pdf_images[page].height()),
-                #     (255,255,255))
-                # edited_pages[page]["image_draw"] = ImageDraw.Draw(edited_pages[page]["image"])
-                # edited_pages[page]["image_draw"].line([(line[0], line[1]), (line[2], line[3])], fill=self.color, width=10)
-
-                # Check if this page has been edited already
+                ## Check if this page has been edited already
                 if page_num not in edited_pages:
                     # Create new entry in edited_pages
                     print(self.pdf_images[page_num][0])
-                    temp_img = Image.open(self.pdf_images[page_num][0])
+                    temp_img = Image.open(self.pdf_images[page_num][0]) # create PIL Image from pdf image path
                     edited_pages[page_num] = {
                         'image': temp_img,
-                        'image_draw': ImageDraw.Draw(temp_img)
+                        'image_draw': ImageDraw.Draw(temp_img) # Create PIL ImageDraw from PIL Image
                     }
 
                 # Draw the line in this stroke
-                edited_pages[page_num]['image_draw'].line([(line[0], line[1]), (line[2], line[3])], fill=self.color, width=10)
+                # TODO: Handle line coordinates that go outside the page
+                edited_pages[page_num]['image_draw'].line([(line[0], line[1]), (line[2], line[3])], fill='black', width=5)
         else:
-            # Both top-level loop is complete; Save every page.
-            for i, page in enumerate(edited_pages.keys()):
-                #self.pdf_images[page][1].paste(edited_pages[page]["image"], (20,20))
-                edited_pages[page]["image"].save(str(i) + ".png")
-                #self.pdf_images[page][1].save("asdf.png")
+            # Top-level loop is complete; Save every page.
+            img_list = []
+            for page_num, (img_path, _) in self.pdf_images.items():
+                if page_num in edited_pages:
+                    # Append the image that has been drawn on.
+                    img_list.append(edited_pages[page_num]['image'])
+                else:
+                    # Append the un-edited image, which must be converted from
+                    # TKinter PhotoImage to PIL Image
+                    img_list.append(Image.open(self.pdf_images[page_num][0]))
+            save_images_as_pdf(img_list, "test.pdf")
 
     def coordinate_to_page(self, coord, page_height):
         """

@@ -5,7 +5,7 @@ import re
 from tempfile import TemporaryDirectory
 import tkinter as tk
 
-def pdf_to_imgs(src_pdf, first_page=None, last_page=None, res=72) -> TemporaryDirectory:
+def pdf_to_imgs(src_pdf, first_page=None, last_page=None, res=300) -> TemporaryDirectory:
     """
     Converts a PDF page to Pillow Image
 
@@ -41,3 +41,14 @@ def is_image(img_name)->bool:
     if re.search(r"\.(gif|jpg|jpeg|tiff|png|ppm)$", img_name) is not None:
         return True
     return False
+
+def save_images_as_pdf(imgs, name):
+    """
+    Save a list of images as a PDF; each item in list gets one page.
+
+    :param list imgs: PIL Images
+    :param str name: File name of PDF.
+    """
+    assert name.endswith('.pdf') is True
+
+    imgs[0].save(name, append_images=imgs[1:], save_all=True)
