@@ -4,7 +4,9 @@ A GUI to view and sign PDFs.
 Clone the repository. Use */env/requirements.txt* to create a new environment.
 
 ### Usage
-`python main.py`
+```
+python main.py
+```
 
 ### Prerequisites
 See *requirements.txt*.
