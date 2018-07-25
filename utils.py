@@ -5,7 +5,7 @@ import re
 from tempfile import TemporaryDirectory
 import tkinter as tk
 
-def pdf_to_imgs(src_pdf, first_page=None, last_page=None, res=300) -> TemporaryDirectory:
+def pdf_to_imgs(src_pdf, first_page=None, last_page=None, res=100) -> TemporaryDirectory:
     """
     Converts a PDF page to Pillow Image
 
